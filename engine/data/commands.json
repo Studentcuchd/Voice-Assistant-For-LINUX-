@@ -1,0 +1,214 @@
+{
+  "commands": [
+    {
+      "id": "open_browser",
+      "category": "application",
+      "keywords": ["browser", "firefox", "chrome", "chromium", "web", "internet"],
+      "action": "launch_app",
+      "app_candidates": ["firefox", "google-chrome", "chromium-browser", "chromium"],
+      "description": "Open a web browser",
+      "dangerous": false
+    },
+    {
+      "id": "open_terminal",
+      "category": "application",
+      "keywords": ["terminal", "console", "bash", "shell", "command line", "gnome-terminal", "xterm"],
+      "action": "launch_app",
+      "app_candidates": ["gnome-terminal", "xterm", "konsole", "xfce4-terminal", "lxterminal"],
+      "description": "Open a terminal emulator",
+      "dangerous": false
+    },
+    {
+      "id": "open_vscode",
+      "category": "application",
+      "keywords": ["vscode", "vs code", "visual studio", "code editor", "editor"],
+      "action": "launch_app",
+      "app_candidates": ["code", "code-insiders", "vscodium"],
+      "description": "Open VS Code editor",
+      "dangerous": false
+    },
+    {
+      "id": "open_files",
+      "category": "application",
+      "keywords": ["file manager", "nautilus", "finder", "explorer", "open file manager"],
+      "action": "launch_app",
+      "app_candidates": ["nautilus", "nemo", "thunar", "dolphin", "pcmanfm"],
+      "description": "Open file manager",
+      "dangerous": false
+    },
+    {
+      "id": "open_text_editor",
+      "category": "application",
+      "keywords": ["text editor", "notepad", "gedit", "nano", "vim", "write"],
+      "action": "launch_app",
+      "app_candidates": ["gedit", "mousepad", "xed", "kate", "leafpad"],
+      "description": "Open a text editor",
+      "dangerous": false
+    },
+    {
+      "id": "create_folder",
+      "category": "file_operation",
+      "keywords": ["create folder", "make folder", "new folder", "mkdir", "create directory", "make directory"],
+      "action": "create_directory",
+      "description": "Create a new directory",
+      "requires_name": true,
+      "dangerous": false
+    },
+    {
+      "id": "delete_file",
+      "category": "file_operation",
+      "keywords": ["delete file", "remove file", "rm file", "erase file"],
+      "action": "delete_file",
+      "description": "Delete a file",
+      "requires_name": true,
+      "dangerous": true
+    },
+    {
+      "id": "delete_folder",
+      "category": "file_operation",
+      "keywords": ["delete folder", "remove folder", "rm folder", "erase folder", "delete directory", "remove directory"],
+      "action": "delete_directory",
+      "description": "Delete a folder/directory",
+      "requires_name": true,
+      "dangerous": true
+    },
+    {
+      "id": "list_files",
+      "category": "file_operation",
+      "keywords": ["list files", "show files", "ls", "what files", "files here", "list directory"],
+      "action": "list_files",
+      "description": "List files in current directory",
+      "dangerous": false
+    },
+    {
+      "id": "current_directory",
+      "category": "navigation",
+      "keywords": ["current directory", "where am i", "pwd", "current folder", "present directory", "current path"],
+      "action": "print_working_dir",
+      "description": "Show current working directory",
+      "dangerous": false
+    },
+    {
+      "id": "change_directory",
+      "category": "navigation",
+      "keywords": ["change directory", "go to", "navigate to", "cd", "open folder", "move to"],
+      "action": "change_directory",
+      "description": "Change current directory",
+      "requires_name": true,
+      "dangerous": false
+    },
+    {
+      "id": "go_home",
+      "category": "navigation",
+      "keywords": ["go home", "home directory", "home folder", "cd home"],
+      "action": "go_home",
+      "description": "Navigate to home directory",
+      "dangerous": false
+    },
+    {
+      "id": "cpu_usage",
+      "category": "system_monitor",
+      "keywords": ["cpu", "processor", "cpu usage", "processor usage", "cpu load"],
+      "action": "show_cpu",
+      "description": "Show CPU usage",
+      "dangerous": false
+    },
+    {
+      "id": "memory_usage",
+      "category": "system_monitor",
+      "keywords": ["memory", "ram", "memory usage", "ram usage", "free memory"],
+      "action": "show_memory",
+      "description": "Show memory/RAM usage",
+      "dangerous": false
+    },
+    {
+      "id": "disk_usage",
+      "category": "system_monitor",
+      "keywords": ["disk", "storage", "disk usage", "disk space", "drive space", "hard drive"],
+      "action": "show_disk",
+      "description": "Show disk usage",
+      "dangerous": false
+    },
+    {
+      "id": "system_info",
+      "category": "system_monitor",
+      "keywords": ["system info", "system information", "os info", "uname", "about system"],
+      "action": "show_system_info",
+      "description": "Show system information",
+      "dangerous": false
+    },
+    {
+      "id": "running_processes",
+      "category": "system_monitor",
+      "keywords": ["processes", "running processes", "top", "ps", "what's running", "active processes"],
+      "action": "show_processes",
+      "description": "Show running processes",
+      "dangerous": false
+    },
+    {
+      "id": "shutdown",
+      "category": "system_control",
+      "keywords": ["shutdown", "shut down", "power off", "turn off"],
+      "action": "shutdown",
+      "description": "Shutdown the system",
+      "dangerous": true
+    },
+    {
+      "id": "reboot",
+      "category": "system_control",
+      "keywords": ["reboot", "restart", "restart system", "reboot system"],
+      "action": "reboot",
+      "description": "Reboot the system",
+      "dangerous": true
+    },
+    {
+      "id": "update_system",
+      "category": "system_control",
+      "keywords": ["update", "upgrade", "apt update", "system update", "update packages"],
+      "action": "update_system",
+      "description": "Update system packages",
+      "dangerous": false
+    },
+    {
+      "id": "clear_screen",
+      "category": "utility",
+      "keywords": ["clear", "clear screen", "cls", "clear terminal", "clean screen"],
+      "action": "clear_screen",
+      "description": "Clear the terminal screen",
+      "dangerous": false
+    },
+    {
+      "id": "show_date",
+      "category": "utility",
+      "keywords": ["date", "time", "current date", "what time", "what day", "clock"],
+      "action": "show_date",
+      "description": "Show current date and time",
+      "dangerous": false
+    },
+    {
+      "id": "show_ip",
+      "category": "utility",
+      "keywords": ["ip address", "ip", "network address", "my ip", "inet"],
+      "action": "show_ip",
+      "description": "Show IP address",
+      "dangerous": false
+    },
+    {
+      "id": "show_uptime",
+      "category": "utility",
+      "keywords": ["uptime", "how long running", "system uptime", "running time", "how long running", "how long system", "system been running"],
+      "action": "show_uptime",
+      "description": "Show system uptime",
+      "dangerous": false
+    },
+    {
+      "id": "create_file",
+      "category": "file_operation",
+      "keywords": ["create file", "new file", "touch file", "make file", "create a file", "make a file"],
+      "action": "create_file",
+      "description": "Create a new empty file",
+      "requires_name": true,
+      "dangerous": false
+    }
+  ]
+}

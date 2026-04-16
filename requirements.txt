@@ -1,0 +1,11 @@
+# Voice-Controlled Linux Assistant — Python dependencies
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# For voice input you also need PortAudio (system package):
+#   sudo apt install portaudio19-dev python3-pyaudio   # Debian/Ubuntu
+#   sudo dnf install portaudio-devel                   # Fedora
+
+SpeechRecognition>=3.10.0
+pyaudio>=0.2.13          # microphone access — requires PortAudio system library
