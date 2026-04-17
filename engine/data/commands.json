@@ -10,6 +10,15 @@
       "dangerous": false
     },
     {
+      "id": "search_web",
+      "category": "application",
+      "keywords": ["search web", "search browser", "search the web", "look up", "google", "search for", "browser search"],
+      "action": "search_web",
+      "description": "Search the web in the browser",
+      "requires_name": true,
+      "dangerous": false
+    },
+    {
       "id": "open_terminal",
       "category": "application",
       "keywords": ["terminal", "console", "bash", "shell", "command line", "gnome-terminal", "xterm"],

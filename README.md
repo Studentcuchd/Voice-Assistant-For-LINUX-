@@ -41,6 +41,14 @@ python main.py --text
 
 Voice mode calibrates the microphone when available. Text mode bypasses the microphone entirely.
 
+Try phrases like:
+
+```text
+search web for python lists
+look up best vscode extensions
+search on browser weather in london
+```
+
 ## Command Model
 
 Command definitions live in [engine/data/commands.json](engine/data/commands.json). Each entry declares keywords, an action name, whether it is dangerous, and optional app candidates or required arguments.

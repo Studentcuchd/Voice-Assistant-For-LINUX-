@@ -41,6 +41,9 @@ _ALIAS_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bopen\s+(?:the\s+)?files?\b", re.IGNORECASE), "show files"),
     (re.compile(r"\bshow\s+me\s+files?\b", re.IGNORECASE), "show files"),
     (re.compile(r"\bcan\s+you\s+show\s+me\s+files?\b", re.IGNORECASE), "show files"),
+    (re.compile(r"\blook\s+up\b", re.IGNORECASE), "search web"),
+    (re.compile(r"\bsearch\s+(?:the\s+)?web\b", re.IGNORECASE), "search web"),
+    (re.compile(r"\bsearch\s+(?:on\s+)?browser\b", re.IGNORECASE), "search web"),
     (re.compile(r"\bgo\s+to\s+folder\b", re.IGNORECASE), "go to"),
     (re.compile(r"\bgo\s+to\s+directory\b", re.IGNORECASE), "go to"),
     (re.compile(r"\bopen\s+the\s+browser\b", re.IGNORECASE), "open browser"),
@@ -520,6 +523,14 @@ class Interpreter:
         tail = fragment
         if matched_phrase and matched_phrase in fragment:
             tail = fragment.split(matched_phrase, 1)[1]
+
+        if definition.id == "search_web":
+            tail = re.sub(
+                r"^(?:for|about|on|the|web|browser)\b\s*",
+                "",
+                tail,
+                flags=re.IGNORECASE,
+            )
 
         tail = tail.strip()
 

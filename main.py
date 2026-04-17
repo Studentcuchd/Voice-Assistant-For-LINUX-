@@ -56,6 +56,7 @@ HELP_TEXT = """
 ╠════════════════════════════════════════════════════════════╣
 ║  Applications                                              ║
 ║    open browser / launch firefox / start chrome           ║
+║    search web for python lists                             ║
 ║    open terminal / open vscode / open file manager        ║
 ║                                                            ║
 ║  File Operations                                           ║

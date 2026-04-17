@@ -5,9 +5,11 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
+from urllib.parse import quote_plus
 
 from engine.interpreter import Command
 from utils.logger import get_logger
@@ -23,6 +25,7 @@ class Executor:
     def __init__(self) -> None:
         self._dispatch: dict[str, Callable[[Command], str]] = {
             "launch_app": self._launch_app,
+            "search_web": self._search_web,
             "create_directory": self._create_directory,
             "delete_file": self._delete_file,
             "delete_directory": self._delete_directory,
@@ -108,9 +111,19 @@ class Executor:
 
     def _launch_app(self, command: Command) -> str:
         candidates = command.app_candidates or ([command.argument] if command.argument else [])
+        if command.id == "open_browser":
+            opened = webbrowser.open_new_tab(command.argument or "about:blank")
+            if opened:
+                return "✅  Opened default web browser."
+
         app = self._which_first([candidate for candidate in candidates if candidate])
         if not app:
             tried = ", ".join(candidate for candidate in candidates if candidate)
+            if command.id == "open_browser":
+                opened = webbrowser.open_new_tab(command.argument or "about:blank")
+                if opened:
+                    return "✅  Opened default web browser."
+                return "❌  Could not open the default web browser."
             return f"❌  Could not find any of: {tried}. Is it installed?"
 
         subprocess.Popen(
@@ -120,6 +133,18 @@ class Executor:
             start_new_session=True,
         )
         return f"✅  Launched: {app}"
+
+    def _search_web(self, command: Command) -> str:
+        query = (command.argument or "").strip()
+        if not query:
+            return "❌  Please specify what to search for. Example: 'search for python lists'"
+
+        url = f"https://www.google.com/search?q={quote_plus(query)}"
+        opened = webbrowser.open_new_tab(url)
+        if not opened:
+            return "❌  Could not open the web browser for search."
+
+        return f"✅  Searched the web for: {query}"
 
     def _create_directory(self, command: Command) -> str:
         if not command.argument:
