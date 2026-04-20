@@ -31,6 +31,8 @@ class PlanStep:
     args: dict[str, Any] = field(default_factory=dict)
     dangerous: bool = False
     intent_id: str = ""
+    depends_on: list[str] = field(default_factory=list)
+    max_retries: int = 0
 
 
 @dataclass
@@ -53,6 +55,8 @@ class SessionState:
     last_intents: list[Intent] = field(default_factory=list)
     last_results: list[ExecutionResult] = field(default_factory=list)
     slots: dict[str, Any] = field(default_factory=dict)
+    conversation_history: list[dict[str, str]] = field(default_factory=list)
+    entities: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

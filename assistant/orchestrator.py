@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import os
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from assistant.contracts import AssistantContext, ExecutionResult, Intent
 from assistant.executor import PluginManager
@@ -23,7 +22,7 @@ class AssistantOrchestrator:
         *,
         policy_file: Path,
         db_path: Path,
-        confirm_callback: Optional[callable] = None,
+        confirm_callback: Optional[Callable[[str, str, dict], bool]] = None,
     ) -> None:
         self._intent = HybridIntentEngine()
         self._planner = Planner()
@@ -37,11 +36,12 @@ class AssistantOrchestrator:
             cwd=str(Path.cwd()),
             session_id=uuid.uuid4().hex,
             state=self._session.state,
-            metadata={},
+            metadata={"db_path": str(db_path)},
         )
 
     def process(self, utterance: str) -> list[ExecutionResult]:
-        intents = self._intent.parse(utterance)
+        intent_context = self._session.context_payload()
+        intents = self._intent.parse(utterance, context=intent_context)
         if not intents:
             suggestions = self._intent.suggest(utterance)
             hint = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
@@ -51,8 +51,20 @@ class AssistantOrchestrator:
 
         steps = self._planner.build(intents)
         results: list[ExecutionResult] = []
+        execution_status: dict[str, bool] = {}
 
         for step in steps:
+            if step.depends_on and not all(execution_status.get(dep, False) for dep in step.depends_on):
+                skipped = ExecutionResult(
+                    ok=False,
+                    message=f"Skipped '{step.action}' because dependencies failed.",
+                    step_id=step.id,
+                    plugin="planner",
+                )
+                results.append(skipped)
+                execution_status[step.id] = False
+                continue
+
             decision = self._policy.evaluate(step)
             if not decision.allow:
                 results.append(
@@ -63,6 +75,7 @@ class AssistantOrchestrator:
                         plugin="policy",
                     )
                 )
+                execution_status[step.id] = False
                 continue
 
             if decision.requires_confirmation:
@@ -77,10 +90,12 @@ class AssistantOrchestrator:
                             details={"risk": decision.risk},
                         )
                     )
+                    execution_status[step.id] = False
                     continue
 
-            result = self._plugins.execute(step, self._context)
+            result = self._execute_with_retry(step)
             results.append(result)
+            execution_status[step.id] = result.ok
 
             source_intent = self._find_intent_for_step(step.intent_id, intents)
             if source_intent is not None:
@@ -88,6 +103,42 @@ class AssistantOrchestrator:
 
         self._session.record_turn(utterance, intents, results)
         return results
+
+    def poll_background(self) -> list[ExecutionResult]:
+        """Run lightweight proactive checks between turns."""
+        from assistant.contracts import PlanStep
+
+        check_step = PlanStep(
+            id="background_check_reminders",
+            action="check_reminders",
+            plugin="proactive",
+            args={},
+            dangerous=False,
+            intent_id="background",
+        )
+        result = self._plugins.execute(check_step, self._context)
+        if result.ok and result.message:
+            return [result]
+        return []
+
+    def _execute_with_retry(self, step) -> ExecutionResult:
+        attempts = max(1, step.max_retries + 1)
+        last_result = ExecutionResult(
+            ok=False,
+            message=f"Execution failed for '{step.action}'.",
+            step_id=step.id,
+            plugin="executor",
+        )
+
+        for attempt in range(1, attempts + 1):
+            result = self._plugins.execute(step, self._context)
+            if result.ok:
+                if attempt > 1:
+                    result.message = f"{result.message} (recovered on retry {attempt}/{attempts})"
+                return result
+            last_result = result
+
+        return last_result
 
     @staticmethod
     def _find_intent_for_step(intent_id: str, intents: list[Intent]) -> Optional[Intent]:

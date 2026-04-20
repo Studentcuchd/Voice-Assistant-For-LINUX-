@@ -10,6 +10,11 @@ This project converts natural-language voice or text into executable Linux comma
 - Added wake-word-aware input pipeline with tolerant matching for speech variation (`hey linux`, `hey linus`, etc.).
 - Added Linux desktop automation plugin support using `xdotool`.
 - Preserved backward compatibility: original MVP entrypoint remains `main.py`.
+- Added context-aware follow-up handling (e.g., opening first/second search result).
+- Added safe Ollama fallback option for unknown intents (JSON-only parser mode).
+- Added dependency-aware plan sequencing with retries for composite tasks.
+- Added proactive reminder and suggestion plugin with background reminder polling.
+- Added optional TTS responses (`spd-say`/`espeak`) and pyautogui automation fallback.
 
 ## Project Structure
 
@@ -58,6 +63,8 @@ python app/main.py
 python app/main.py --text
 python app/main.py --continuous --wake-word "hey linux"
 python app/main.py --continuous --wake-word "hey linux" --wake-threshold 0.72
+python app/main.py --text --ollama --ollama-model "llama3.2:3b"
+python app/main.py --continuous --tts --ollama --ollama-model "llama3.2:3b"
 ```
 
 Voice mode calibrates the microphone when available. Text mode bypasses the microphone entirely.
@@ -102,6 +109,14 @@ The new architecture adds production-grade layers without breaking the original 
 Persistent memory database is stored at `data/assistant.db`.
 
 Optional Linux desktop automation plugin uses `xdotool`.
+
+Proactive and conversational additions:
+
+- `remind me in 10 minutes to check logs`
+- `what should i do now`
+- `open first result` / `open second result` / `not that one`
+
+Optional TTS requires either `spd-say` or `espeak` available on Linux.
 
 ## Extending the Assistant
 

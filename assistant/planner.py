@@ -8,11 +8,16 @@ from assistant.contracts import Intent, PlanStep
 class Planner:
     """Simple deterministic planner with room for DAG extension."""
 
-    _COMPOSITE_MAP: dict[str, list[tuple[str, str, str]]] = {
+    _COMPOSITE_MAP: dict[str, list[tuple[str, str, str, int]]] = {
         "clean_and_update": [
-            ("clear_cache", "system", "clear_cache"),
-            ("remove_temp", "files", "remove_temp"),
-            ("update_system", "system", "update_system"),
+            ("clear_cache", "system", "clear_cache", 0),
+            ("remove_temp", "files", "remove_temp", 0),
+            ("update_system", "system", "update_system", 1),
+        ],
+        "prepare_dev_environment": [
+            ("open_terminal", "apps", "launch_app", 0),
+            ("goto_project", "files", "change_directory", 0),
+            ("open_vscode", "apps", "launch_app", 0),
         ]
     }
 
@@ -21,17 +26,22 @@ class Planner:
 
         for intent in intents:
             if intent.id in self._COMPOSITE_MAP:
-                for idx, (step_id, plugin, action) in enumerate(self._COMPOSITE_MAP[intent.id], start=1):
+                previous_step_id = ""
+                for idx, (step_id, plugin, action, retries) in enumerate(self._COMPOSITE_MAP[intent.id], start=1):
+                    current_id = f"{intent.id}_{idx}_{step_id}"
                     steps.append(
                         PlanStep(
-                            id=f"{intent.id}_{idx}_{step_id}",
+                            id=current_id,
                             action=action,
                             plugin=plugin,
                             args=dict(intent.args),
                             dangerous=intent.dangerous,
                             intent_id=intent.id,
+                            depends_on=[previous_step_id] if previous_step_id else [],
+                            max_retries=retries,
                         )
                     )
+                    previous_step_id = current_id
                 continue
 
             steps.append(
@@ -42,6 +52,8 @@ class Planner:
                     args=dict(intent.args),
                     dangerous=intent.dangerous,
                     intent_id=intent.id,
+                    depends_on=[],
+                    max_retries=0,
                 )
             )
 
@@ -49,8 +61,11 @@ class Planner:
 
     @staticmethod
     def _plugin_for_intent(intent: Intent) -> str:
-        if intent.action == "search_web":
+        if intent.action in {"search_web", "open_search_result"}:
             return "browser"
+
+        if intent.action in {"set_reminder", "check_reminders", "suggest_next_action"}:
+            return "proactive"
 
         category_map = {
             "application": "apps",
