@@ -118,16 +118,20 @@ class Executor:
 
     def _launch_app(self, command: Command) -> str:
         candidates = command.app_candidates or ([command.argument] if command.argument else [])
-        if command.id == "open_browser":
-            opened = webbrowser.open_new_tab(command.argument or "about:blank")
-            if opened:
-                return "✅  Opened default web browser."
+
+        if command.id == "open_browser" and command.argument:
+            lower_arg = command.argument.strip().lower()
+            if lower_arg.startswith(("http://", "https://", "www.")):
+                url = command.argument if lower_arg.startswith(("http://", "https://")) else f"https://{command.argument}"
+                opened = webbrowser.open_new_tab(url)
+                if opened:
+                    return f"✅  Opened browser URL: {url}"
 
         app = self._which_first([candidate for candidate in candidates if candidate])
         if not app:
             tried = ", ".join(candidate for candidate in candidates if candidate)
             if command.id == "open_browser":
-                opened = webbrowser.open_new_tab(command.argument or "about:blank")
+                opened = webbrowser.open_new_tab("about:blank")
                 if opened:
                     return "✅  Opened default web browser."
                 return "❌  Could not open the default web browser."

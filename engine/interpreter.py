@@ -195,12 +195,22 @@ class Interpreter:
         for item in scored:
             if item.score <= 0:
                 continue
-            suggestion = item.definition.canonical_phrase or item.definition.description
+            suggestion = self._friendly_suggestion(item.definition, item.phrase)
             if suggestion not in suggestions:
                 suggestions.append(suggestion)
             if len(suggestions) >= top_n:
                 break
         return suggestions
+
+    def _friendly_suggestion(self, definition: CommandDefinition, matched_phrase: str) -> str:
+        phrase = (matched_phrase or definition.canonical_phrase).strip().lower()
+        if phrase and len(phrase.split()) >= 2:
+            return phrase
+
+        desc = definition.description.strip().lower()
+        desc = re.sub(r"\b(?:a|an|the)\b", "", desc)
+        desc = re.sub(r"\s+", " ", desc).strip()
+        return desc or phrase or definition.id
 
     def _load_commands(self, path: Path) -> None:
         try:
@@ -374,6 +384,10 @@ class Interpreter:
                 best_base = phrase_score
                 best_phrase = phrase
 
+        if definition.id == "open_browser" and "search" in fragment.split():
+            # Avoid mapping "search web ..." to open_browser via generic "web" keyword.
+            best_base = max(0.0, best_base - 0.22)
+
         intent_score = self._intent_score(fragment, definition, best_phrase)
         priority_bonus = min(max(definition.priority, 0) / 100.0, 1.0) * 0.12
         confidence = min(1.0, (best_base * 0.72) + intent_score + priority_bonus)
@@ -421,6 +435,12 @@ class Interpreter:
         tokens = set(fragment.split())
         score = 0.0
 
+        if definition.action == "search_web":
+            if tokens & {"search", "lookup", "look", "google", "find"}:
+                score += 0.32
+            if tokens & {"for", "about"}:
+                score += 0.08
+
         if definition.category == "file_operation":
             if tokens & {"file", "files", "folder", "directory", "directories", "list", "show"}:
                 score += 0.18
@@ -456,7 +476,7 @@ class Interpreter:
         if definition.dangerous and tokens & {"delete", "remove", "erase", "shutdown", "reboot", "destroy"}:
             score += 0.08
 
-        return min(score, 0.35)
+        return max(-0.2, min(score, 0.45))
 
     def _resolve_fragment(self, fragment: str) -> Optional[Command]:
         contextual = self._resolve_contextual_reference(fragment)
@@ -517,7 +537,25 @@ class Interpreter:
         definition: CommandDefinition,
         matched_phrase: str,
     ) -> Optional[str]:
+        if definition.action == "search_web":
+            tail = fragment
+            if matched_phrase and matched_phrase in fragment:
+                tail = fragment.split(matched_phrase, 1)[1]
+            tail = tail.strip()
+            tail = re.sub(
+                r"^(?:for|about|on|the|web|browser)\b\s*",
+                "",
+                tail,
+                flags=re.IGNORECASE,
+            )
+            tail = re.sub(r"\s+", " ", tail).strip(' "\'')
+            return tail or None
+
         if definition.action == "launch_app":
+            if definition.id == "open_browser":
+                # Browser-open intent does not require a URL argument; keep None.
+                return None
+
             normalized_fragment = f" {fragment.lower()} "
 
             for app in definition.app_candidates:
@@ -542,14 +580,6 @@ class Interpreter:
         tail = fragment
         if matched_phrase and matched_phrase in fragment:
             tail = fragment.split(matched_phrase, 1)[1]
-
-        if definition.id == "search_web":
-            tail = re.sub(
-                r"^(?:for|about|on|the|web|browser)\b\s*",
-                "",
-                tail,
-                flags=re.IGNORECASE,
-            )
 
         tail = tail.strip()
 
@@ -584,6 +614,9 @@ class Interpreter:
             "open again",
             "launch again",
             "start again",
+            "do that",
+            "run that",
+            "do it again",
         }
 
         if normalized not in reference_phrases:

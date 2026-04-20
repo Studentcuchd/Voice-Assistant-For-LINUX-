@@ -59,6 +59,8 @@ pip install -r requirements.txt
 ```bash
 python main.py
 python main.py --text
+python main.py --tts
+python main.py --wake-word "hey siri"
 python app/main.py
 python app/main.py --text
 python app/main.py --continuous --wake-word "hey linux"
