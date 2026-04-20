@@ -36,6 +36,14 @@ voiceassistant/
 
 The project is designed for Linux.
 
+One-step setup (recommended):
+
+```bash
+bash setup_linux.sh
+```
+
+This script installs required Linux packages and Python dependencies.
+
 ```bash
 sudo apt install portaudio19-dev python3-pyaudio
 pip install -r requirements.txt
