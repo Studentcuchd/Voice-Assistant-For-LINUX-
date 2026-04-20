@@ -103,6 +103,13 @@ class Executor:
             return -1, "", f"Command not found: {cmd_name}"
 
     @staticmethod
+    def _detach_kwargs() -> dict:
+        """Return platform-specific kwargs to detach subprocess from parent."""
+        if os.name == "nt":  # Windows
+            return {"creationflags": subprocess.DETACHED_PROCESS}
+        return {"start_new_session": True}  # Unix/Linux
+
+    @staticmethod
     def _which_first(candidates: list[str]) -> Optional[str]:
         for candidate in candidates:
             if candidate and shutil.which(candidate):
@@ -130,7 +137,7 @@ class Executor:
             [app],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            start_new_session=True,
+            **self._detach_kwargs(),
         )
         return f"✅  Launched: {app}"
 
