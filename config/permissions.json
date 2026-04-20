@@ -1,0 +1,15 @@
+{
+  "deny_actions": [],
+  "high_risk_actions": [
+    "delete_file",
+    "delete_directory",
+    "shutdown",
+    "reboot"
+  ],
+  "medium_risk_actions": [
+    "update_system",
+    "change_directory"
+  ],
+  "confirm_high": true,
+  "confirm_medium": false
+}
