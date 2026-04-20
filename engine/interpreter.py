@@ -517,6 +517,25 @@ class Interpreter:
         definition: CommandDefinition,
         matched_phrase: str,
     ) -> Optional[str]:
+        if definition.action == "launch_app":
+            normalized_fragment = f" {fragment.lower()} "
+
+            for app in definition.app_candidates:
+                app_norm = app.strip().lower()
+                if not app_norm:
+                    continue
+
+                aliases = {app_norm}
+                aliases.update(part for part in re.split(r"[-_.]", app_norm) if part)
+                if app_norm.startswith("google-"):
+                    aliases.add(app_norm.replace("google-", "", 1))
+                if app_norm.endswith("-browser"):
+                    aliases.add(app_norm[: -len("-browser")])
+
+                for alias in aliases:
+                    if re.search(rf"(?<![a-z0-9_]){re.escape(alias)}(?![a-z0-9_])", normalized_fragment):
+                        return app
+
         if not definition.requires_name:
             return None
 
