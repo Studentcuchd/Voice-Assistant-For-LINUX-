@@ -1,134 +1,162 @@
 # Voice-Controlled Linux Assistant
 
-This project converts natural-language voice or text into executable Linux commands. It includes multi-command splitting, fuzzy matching, safety confirmation for destructive actions, and a JSON-driven command catalog.
+Complete voice and text assistant for Linux with:
 
-## Latest Updates
+- Rule-based + fallback intent parsing
+- Command execution with safety checks
+- Browser search integration
+- Modular plugin runtime
+- Session + long-term memory (SQLite)
+- Optional wake-word flow, automation, and TTS
 
-- Added production modular architecture with orchestrator, planner, policy engine, memory, and dynamic plugins.
-- Introduced hybrid intent handling: rule-based parser first, deterministic fallback parser second.
-- Added persistent long-term memory with SQLite (`data/assistant.db`) and session memory for short-term context.
-- Added wake-word-aware input pipeline with tolerant matching for speech variation (`hey linux`, `hey linus`, etc.).
-- Added Linux desktop automation plugin support using `xdotool`.
-- Preserved backward compatibility: original MVP entrypoint remains `main.py`.
-- Added context-aware follow-up handling (e.g., opening first/second search result).
-- Added safe Ollama fallback option for unknown intents (JSON-only parser mode).
-- Added dependency-aware plan sequencing with retries for composite tasks.
-- Added proactive reminder and suggestion plugin with background reminder polling.
-- Added optional TTS responses (`spd-say`/`espeak`) and pyautogui automation fallback.
+This repository is now intentionally clean:
 
-## Project Structure
+- One installation file: `requirements.txt`
+- One documentation file: `README.md`
+
+## Project Layout
 
 ```text
 voiceassistant/
-├── main.py
-├── requirements.txt
 ├── README.md
+├── requirements.txt
+├── main.py                     # MVP runner
+├── app/
+│   └── main.py                 # production modular runner
+├── assistant/
+│   ├── contracts.py
+│   ├── executor.py
+│   ├── feedback.py
+│   ├── input.py
+│   ├── intent.py
+│   ├── memory.py
+│   ├── orchestrator.py
+│   ├── planner.py
+│   ├── policy.py
+│   ├── tts.py
+│   └── plugins/
 ├── engine/
-│   ├── __init__.py
 │   ├── interpreter.py
 │   ├── executor.py
-│   └── data/
-│       └── commands.json
+│   └── data/commands.json
 ├── voice/
-│   ├── __init__.py
 │   └── speech.py
-└── utils/
-    ├── __init__.py
-    └── logger.py
+├── utils/
+│   └── logger.py
+├── config/
+│   └── permissions.json
+└── data/
+    └── assistant.db            # runtime-generated
 ```
 
-## Setup
+## Installation
 
-The project is designed for Linux.
+All installation instructions are intentionally centralized in one file only:
 
-One-step setup (recommended):
+- `requirements.txt`
 
-```bash
-bash setup_linux.sh
-```
+That file contains:
 
-This script installs required Linux packages and Python dependencies.
+- Python package dependencies
+- Linux system package prerequisites for Debian/Ubuntu, Fedora, and Arch
+- Notes for optional features (audio, automation, TTS)
 
-```bash
-sudo apt install portaudio19-dev python3-pyaudio
-pip install -r requirements.txt
-```
+If microphone input is unavailable, the app automatically falls back to text mode.
 
-## Usage
+## Quick Start
+
+### MVP runner
 
 ```bash
 python main.py
 python main.py --text
-python main.py --tts
-python main.py --wake-word "hey siri"
-python app/main.py
+```
+
+### Production modular runner
+
+```bash
 python app/main.py --text
 python app/main.py --continuous --wake-word "hey linux"
 python app/main.py --continuous --wake-word "hey linux" --wake-threshold 0.72
+python app/main.py --continuous --tts
 python app/main.py --text --ollama --ollama-model "llama3.2:3b"
-python app/main.py --continuous --tts --ollama --ollama-model "llama3.2:3b"
 ```
 
-Voice mode calibrates the microphone when available. Text mode bypasses the microphone entirely.
+## What It Can Do
 
-`main.py` is the backward-compatible MVP runner.
-`app/main.py` is the new production modular runner.
+### Core commands
 
-The modular runner includes tolerant wake-word detection for speech variations
-like `hey linux`, `hey linus`, and similar ASR outputs.
+- Open apps (browser, terminal, file manager, editor)
+- File operations (create/list/delete)
+- Navigation (current path, change directory, go home)
+- System information (cpu/memory/disk/processes/date/ip/uptime)
+- Controlled dangerous actions (shutdown/reboot with confirmation)
 
-Try phrases like:
+### Browser behavior
+
+- `open browser` opens default browser
+- `search web for python lists` performs a search
+- `open https://github.com` opens URL directly
+- `open studentcuchd.github.io` resolves and opens as URL
+- Unknown phrases can fall back to browser search
+
+### Conversational features (modular runtime)
+
+- Context follow-ups: `open first result`, `open second result`, `not that one`
+- Reminder flow: `remind me in 10 minutes to check logs`
+- Next-step suggestions: `what should i do now`
+
+## Architecture Summary
+
+### MVP pipeline
 
 ```text
-search web for python lists
-look up best vscode extensions
-search on browser weather in london
-open https://github.com
-open studentcuchd.github.io
+input -> voice/speech.py -> engine/interpreter.py -> engine/executor.py -> output
 ```
 
-If a phrase does not match a built-in command, the assistant now automatically
-uses your exact input as a web search query in the browser.
-
-## Command Model
-
-Command definitions live in [engine/data/commands.json](engine/data/commands.json). Each entry declares keywords, an action name, whether it is dangerous, and optional app candidates or required arguments.
-
-The runtime flow is:
+### Modular pipeline
 
 ```text
-input -> voice/speech.py -> engine/interpreter.py -> engine/executor.py -> terminal output
+input -> assistant/intent.py -> assistant/planner.py -> assistant/policy.py
+      -> assistant/executor.py (plugins) -> assistant/feedback.py
 ```
 
-## Production Modular Architecture
+Key modules:
 
-The new architecture adds production-grade layers without breaking the original flow:
+- `assistant/orchestrator.py`: end-to-end controller
+- `assistant/intent.py`: hybrid intent engine
+- `assistant/memory.py`: session + SQLite long-term memory
+- `assistant/executor.py`: plugin manager
+- `assistant/plugins/*`: apps/files/browser/system/automation/proactive plugins
 
-- `assistant/orchestrator.py`: parse -> plan -> policy -> plugin execution pipeline
-- `assistant/intent.py`: hybrid intent system (rules first, deterministic fallback second)
-- `assistant/memory.py`: session memory + persistent SQLite long-term memory
-- `assistant/planner.py`: multi-step planning for composite tasks
-- `assistant/policy.py`: risk classification and permission checks
-- `assistant/executor.py`: dynamic plugin loader and router
-- `assistant/plugins/*.py`: apps/files/system/browser/automation feature plugins
-- `config/permissions.json`: allow/deny and confirmation policy
+## Configuration
 
-Persistent memory database is stored at `data/assistant.db`.
+- Command catalog: `engine/data/commands.json`
+- Policy config: `config/permissions.json`
+- Persistent memory DB: `data/assistant.db`
 
-Optional Linux desktop automation plugin uses `xdotool`.
+## Troubleshooting
 
-Proactive and conversational additions:
+### PyAudio install errors
 
-- `remind me in 10 minutes to check logs`
-- `what should i do now`
-- `open first result` / `open second result` / `not that one`
+Follow the Linux package prerequisites listed in `requirements.txt`, then reinstall from the same file.
 
-Optional TTS requires either `spd-say` or `espeak` available on Linux.
+### No microphone detected
+
+Use text mode:
+
+```bash
+python main.py --text
+```
+
+### Automation actions not working
+
+- Verify `xdotool` is present as listed in `requirements.txt`
+- Ensure desktop session allows simulated input
+- PyAutoGUI is used as fallback when available
 
 ## Extending the Assistant
 
-Add a new JSON entry for a command. If the action name is new, add a matching handler in [engine/executor.py](engine/executor.py).
-
-## Notes
-
-The implementation lives under `engine/`, `voice/`, and `utils/`.
+1. Add/modify intents in `engine/data/commands.json`
+2. Add execution logic in `engine/executor.py` or a plugin under `assistant/plugins/`
+3. Update this README when behavior changes

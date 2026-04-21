@@ -1,19 +1,22 @@
-# Voice-Controlled Linux Assistant - Python dependencies
+# Single Python installation file for the entire project.
 #
-# Install all Python dependencies at once:
-#   pip install -r requirements.txt
+# Install command:
+#   python -m pip install -r requirements.txt
 #
-# Linux system packages still required (not installable via pip):
+# Non-pip Linux system packages still required for full features:
 #   Debian/Ubuntu:
 #     sudo apt update
-#     sudo apt install -y portaudio19-dev python3-pyaudio xdotool
+#     sudo apt install -y portaudio19-dev python3-pyaudio xdotool espeak-ng speech-dispatcher
 #
 #   Fedora:
-#     sudo dnf install -y portaudio-devel python3-pyaudio xdotool
+#     sudo dnf install -y portaudio-devel python3-pyaudio xdotool espeak-ng speech-dispatcher
+#
+#   Arch:
+#     sudo pacman -Sy --noconfirm portaudio python-pyaudio xdotool espeak-ng speech-dispatcher
 #
 # Notes:
-# - SQLite is built into Python; no pip package needed.
-# - xdotool is required for desktop automation plugin actions.
+# - SQLite is built into Python; no pip package required.
+# - TTS uses system tools (spd-say/espeak), not Python packages.
 
 SpeechRecognition>=3.10.0,<4.0.0
 PyAudio>=0.2.13,<1.0.0
