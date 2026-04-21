@@ -83,7 +83,12 @@ Try phrases like:
 search web for python lists
 look up best vscode extensions
 search on browser weather in london
+open https://github.com
+open studentcuchd.github.io
 ```
+
+If a phrase does not match a built-in command, the assistant now automatically
+uses your exact input as a web search query in the browser.
 
 ## Command Model
 

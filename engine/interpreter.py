@@ -41,6 +41,7 @@ _ALIAS_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bopen\s+(?:the\s+)?files?\b", re.IGNORECASE), "show files"),
     (re.compile(r"\bshow\s+me\s+files?\b", re.IGNORECASE), "show files"),
     (re.compile(r"\bcan\s+you\s+show\s+me\s+files?\b", re.IGNORECASE), "show files"),
+    (re.compile(r"\bgoogle\b", re.IGNORECASE), "search web"),
     (re.compile(r"\blook\s+up\b", re.IGNORECASE), "search web"),
     (re.compile(r"\bsearch\s+(?:the\s+)?web\b", re.IGNORECASE), "search web"),
     (re.compile(r"\bsearch\s+(?:on\s+)?browser\b", re.IGNORECASE), "search web"),
@@ -164,6 +165,7 @@ class Interpreter:
 
     def parse(self, text: str) -> list[Command]:
         """Parse one natural-language utterance into executable commands."""
+        original_text = text.strip()
         normalized_text = self._normalize_text(text)
         if not normalized_text:
             return []
@@ -174,13 +176,47 @@ class Interpreter:
         for fragment in fragments:
             command = self._resolve_fragment(fragment)
             if command is None:
-                log.warning("No command matched for fragment: %s", fragment)
+                fallback = self._build_fallback_search(fragment)
+                if fallback is not None:
+                    resolved.append(fallback)
+                    self._update_context(fallback)
+                    log.info("Fallback web search triggered for fragment: %s", fragment)
+                else:
+                    log.warning("No command matched for fragment: %s", fragment)
                 continue
             resolved.append(command)
             self._update_context(command)
 
+        # Final safety net in case every fragment is filtered out unexpectedly.
+        if not resolved and original_text:
+            fallback = self._build_fallback_search(original_text)
+            if fallback is not None:
+                resolved.append(fallback)
+                self._update_context(fallback)
+                log.info("Fallback web search triggered for input: %s", original_text)
+
         log.info("Parsed %d fragment(s) into %d command(s)", len(fragments), len(resolved))
         return resolved
+
+    @staticmethod
+    def _build_fallback_search(query: str) -> Optional[Command]:
+        cleaned = query.strip().strip('"\'')
+        if not cleaned:
+            return None
+
+        return Command(
+            id="search_web",
+            action="search_web",
+            description="Search the web in the browser",
+            dangerous=False,
+            argument=cleaned,
+            app_candidates=[],
+            confidence=0.60,
+            raw_fragment=cleaned.lower(),
+            matched_phrase="fallback_search",
+            category="application",
+            priority=65,
+        )
 
     def suggest(self, text: str, top_n: int = 3) -> list[str]:
         """Return a short list of likely commands for an unclear fragment."""

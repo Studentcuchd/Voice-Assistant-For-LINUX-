@@ -150,6 +150,27 @@ class Executor:
         if not query:
             return "❌  Please specify what to search for. Example: 'search for python lists'"
 
+        # Open URLs directly when the user dictates a site.
+        if query.startswith(("http://", "https://")):
+            opened = webbrowser.open_new_tab(query)
+            if not opened:
+                return "❌  Could not open the URL in the browser."
+            return f"✅  Opened URL: {query}"
+
+        if "." in query and " " not in query and not query.startswith("www."):
+            query = f"https://{query}"
+            opened = webbrowser.open_new_tab(query)
+            if not opened:
+                return "❌  Could not open the URL in the browser."
+            return f"✅  Opened URL: {query}"
+
+        if query.startswith("www."):
+            query = f"https://{query}"
+            opened = webbrowser.open_new_tab(query)
+            if not opened:
+                return "❌  Could not open the URL in the browser."
+            return f"✅  Opened URL: {query}"
+
         url = f"https://www.google.com/search?q={quote_plus(query)}"
         opened = webbrowser.open_new_tab(url)
         if not opened:
