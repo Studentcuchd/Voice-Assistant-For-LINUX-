@@ -13,12 +13,17 @@ class LegacyExecutorAdapter:
         self._executor = Executor()
 
     def run(self, *, intent_id: str, action: str, description: str, dangerous: bool, args: dict) -> str:
+        app_candidates = args.get("app_candidates", [])
+        if not isinstance(app_candidates, list):
+            app_candidates = []
+
         command = Command(
             id=intent_id,
             action=action,
             description=description,
             dangerous=dangerous,
             argument=str(args.get("target", "")).strip() or None,
+            app_candidates=[str(item).strip() for item in app_candidates if str(item).strip()],
             category=str(args.get("category", "")),
         )
         return self._executor.run(command)

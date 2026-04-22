@@ -450,6 +450,8 @@ class HybridIntentEngine:
         args: dict[str, Any] = {}
         if command.argument:
             args["target"] = command.argument
+        if command.action == "launch_app" and command.app_candidates:
+            args["app_candidates"] = list(command.app_candidates)
 
         return Intent(
             id=command.id,
