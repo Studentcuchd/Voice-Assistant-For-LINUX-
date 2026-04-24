@@ -181,6 +181,26 @@ class DeterministicFallbackProvider:
                 }
             ]
 
+        open_app = re.match(
+            r"^(?:open|launch|start|run)\s+(?:the\s+)?(?:app(?:lication)?\s+)?(.+)$",
+            value,
+        )
+        if open_app:
+            app_name = open_app.group(1).strip().strip('"\'')
+            if app_name and app_name not in {"browser", "terminal", "vscode", "file manager"}:
+                return [
+                    {
+                        "id": "open_application",
+                        "action": "launch_app",
+                        "category": "application",
+                        "description": "Open application by name",
+                        "args": {"target": app_name, "app_candidates": [app_name]},
+                        "dangerous": False,
+                        "confidence": 0.7,
+                        "source": "deterministic-fallback",
+                    }
+                ]
+
         if "clean system and update" in value:
             return [
                 {

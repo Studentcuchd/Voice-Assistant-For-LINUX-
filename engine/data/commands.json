@@ -5,7 +5,7 @@
       "category": "application",
       "keywords": ["browser", "firefox", "chrome", "chromium", "web", "internet"],
       "action": "launch_app",
-      "app_candidates": ["firefox", "google-chrome", "chromium-browser", "chromium"],
+      "app_candidates": ["msedge", "chrome", "firefox", "brave", "opera", "google-chrome", "chromium-browser", "chromium"],
       "description": "Open a web browser",
       "dangerous": false
     },
@@ -17,13 +17,13 @@
       "description": "Search the web in the browser",
       "requires_name": true,
       "dangerous": false
-    },
+    },    
     {
       "id": "open_terminal",
       "category": "application",
       "keywords": ["terminal", "console", "bash", "shell", "command line", "gnome-terminal", "xterm"],
       "action": "launch_app",
-      "app_candidates": ["gnome-terminal", "xterm", "konsole", "xfce4-terminal", "lxterminal"],
+      "app_candidates": ["wt", "powershell", "cmd", "gnome-terminal", "xterm", "konsole", "xfce4-terminal", "lxterminal"],
       "description": "Open a terminal emulator",
       "dangerous": false
     },
@@ -41,7 +41,7 @@
       "category": "application",
       "keywords": ["file manager", "nautilus", "finder", "explorer", "open file manager"],
       "action": "launch_app",
-      "app_candidates": ["nautilus", "nemo", "thunar", "dolphin", "pcmanfm"],
+      "app_candidates": ["explorer", "nautilus", "nemo", "thunar", "dolphin", "pcmanfm"],
       "description": "Open file manager",
       "dangerous": false
     },
@@ -50,8 +50,17 @@
       "category": "application",
       "keywords": ["text editor", "notepad", "gedit", "nano", "vim", "write"],
       "action": "launch_app",
-      "app_candidates": ["gedit", "mousepad", "xed", "kate", "leafpad"],
+      "app_candidates": ["notepad", "gedit", "mousepad", "xed", "kate", "leafpad"],
       "description": "Open a text editor",
+      "dangerous": false
+    },
+    {
+      "id": "open_application",
+      "category": "application",
+      "keywords": ["open app", "open application", "launch app", "launch application", "start app", "run app"],
+      "action": "launch_app",
+      "description": "Open an application by name",
+      "requires_name": true,
       "dangerous": false
     },
     {
@@ -216,6 +225,24 @@
       "keywords": ["create file", "new file", "touch file", "make file", "create a file", "make a file"],
       "action": "create_file",
       "description": "Create a new empty file",
+      "requires_name": true,
+      "dangerous": false
+    },
+    {
+      "id": "automation_type",
+      "category": "automation",
+      "keywords": ["type", "type text", "write this", "input text", "enter text"],
+      "action": "automation_type",
+      "description": "Type text using desktop automation",
+      "requires_name": true,
+      "dangerous": false
+    },
+    {
+      "id": "automation_hotkey",
+      "category": "automation",
+      "keywords": ["press", "press keys", "press hotkey", "keyboard shortcut", "shortcut"],
+      "action": "automation_hotkey",
+      "description": "Press a keyboard shortcut",
       "requires_name": true,
       "dangerous": false
     }

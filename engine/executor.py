@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import subprocess
 import webbrowser
@@ -13,6 +14,11 @@ from urllib.parse import quote_plus
 
 from engine.interpreter import Command
 from utils.logger import get_logger
+
+try:
+    import pyautogui  # type: ignore[import-not-found]
+except ImportError:
+    pyautogui = None
 
 log = get_logger(__name__)
 
@@ -46,6 +52,8 @@ class Executor:
             "show_ip": self._show_ip,
             "show_uptime": self._show_uptime,
             "create_file": self._create_file,
+            "automation_type": self._automation_type,
+            "automation_hotkey": self._automation_hotkey,
         }
 
     def run(self, command: Command) -> str:
@@ -116,6 +124,68 @@ class Executor:
                 return candidate
         return None
 
+    @staticmethod
+    def _looks_like_url(value: str) -> bool:
+        text = (value or "").strip().lower()
+        if not text:
+            return False
+        return text.startswith(("http://", "https://", "www.")) or ("." in text and " " not in text)
+
+    def _open_url(self, url: str) -> bool:
+        target = url.strip()
+        if not target:
+            return False
+        if target.startswith("www."):
+            target = f"https://{target}"
+        if not target.startswith(("http://", "https://")):
+            target = f"https://{target}"
+
+        if webbrowser.open_new_tab(target):
+            return True
+
+        if os.name == "nt":
+            rc, _, _ = self._run_cmd(["cmd", "/c", "start", "", target], shell=False, capture=False)
+            return rc == 0
+
+        opener = self._which_first(["xdg-open", "gio", "open"])
+        if opener:
+            if opener == "gio":
+                rc, _, _ = self._run_cmd(["gio", "open", target], capture=False)
+            else:
+                rc, _, _ = self._run_cmd([opener, target], capture=False)
+            return rc == 0
+        return False
+
+    def _launch_app_by_name(self, app_name: str) -> bool:
+        target = app_name.strip()
+        if not target:
+            return False
+
+        direct = self._which_first([target])
+        if direct:
+            subprocess.Popen(
+                [direct],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                **self._detach_kwargs(),
+            )
+            return True
+
+        if os.name == "nt":
+            rc, _, _ = self._run_cmd(["cmd", "/c", "start", "", target], shell=False, capture=False)
+            return rc == 0
+
+        try:
+            subprocess.Popen(
+                [target],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                **self._detach_kwargs(),
+            )
+            return True
+        except Exception:
+            return False
+
     def _launch_app(self, command: Command) -> str:
         candidates = command.app_candidates or ([command.argument] if command.argument else [])
 
@@ -123,7 +193,7 @@ class Executor:
             lower_arg = command.argument.strip().lower()
             if lower_arg.startswith(("http://", "https://", "www.")):
                 url = command.argument if lower_arg.startswith(("http://", "https://")) else f"https://{command.argument}"
-                opened = webbrowser.open_new_tab(url)
+                opened = self._open_url(url)
                 if opened:
                     return f"✅  Opened browser URL: {url}"
 
@@ -131,10 +201,12 @@ class Executor:
         if not app:
             tried = ", ".join(candidate for candidate in candidates if candidate)
             if command.id == "open_browser":
-                opened = webbrowser.open_new_tab("about:blank")
+                opened = self._open_url("https://www.google.com")
                 if opened:
                     return "✅  Opened default web browser."
                 return "❌  Could not open the default web browser."
+            if command.argument and self._launch_app_by_name(command.argument):
+                return f"✅  Launched: {command.argument}"
             return f"❌  Could not find any of: {tried}. Is it installed?"
 
         subprocess.Popen(
@@ -151,28 +223,14 @@ class Executor:
             return "❌  Please specify what to search for. Example: 'search for python lists'"
 
         # Open URLs directly when the user dictates a site.
-        if query.startswith(("http://", "https://")):
-            opened = webbrowser.open_new_tab(query)
-            if not opened:
-                return "❌  Could not open the URL in the browser."
-            return f"✅  Opened URL: {query}"
-
-        if "." in query and " " not in query and not query.startswith("www."):
-            query = f"https://{query}"
-            opened = webbrowser.open_new_tab(query)
-            if not opened:
-                return "❌  Could not open the URL in the browser."
-            return f"✅  Opened URL: {query}"
-
-        if query.startswith("www."):
-            query = f"https://{query}"
-            opened = webbrowser.open_new_tab(query)
+        if self._looks_like_url(query):
+            opened = self._open_url(query)
             if not opened:
                 return "❌  Could not open the URL in the browser."
             return f"✅  Opened URL: {query}"
 
         url = f"https://www.google.com/search?q={quote_plus(query)}"
-        opened = webbrowser.open_new_tab(url)
+        opened = self._open_url(url)
         if not opened:
             return "❌  Could not open the web browser for search."
 
@@ -262,6 +320,19 @@ class Executor:
         return f"✅  Changed to home: {home}"
 
     def _show_cpu(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, out, err = self._run_cmd(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average",
+                ]
+            )
+            if rc != 0:
+                return f"❌  Could not read CPU info: {err}"
+            return f"🖥️   CPU usage: {out.strip()}%"
+
         rc, out, err = self._run_cmd(["top", "-bn1"])
         if rc != 0:
             try:
@@ -281,6 +352,19 @@ class Executor:
         return f"🖥️   CPU info:\n{out[:500]}"
 
     def _show_memory(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, out, err = self._run_cmd(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory",
+                ]
+            )
+            if rc != 0:
+                return f"❌  Could not read memory info: {err}"
+            return f"🧠  Memory usage:\n{out}"
+
         rc, out, err = self._run_cmd(["free", "-h"])
         if rc != 0:
             return f"❌  Could not read memory info: {err}"
@@ -290,6 +374,14 @@ class Executor:
         return f"🧠  Memory usage:\n  {header}\n  {memory}"
 
     def _show_disk(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, out, err = self._run_cmd(
+                ["powershell", "-NoProfile", "-Command", "Get-PSDrive -PSProvider FileSystem"]
+            )
+            if rc != 0:
+                return f"❌  Could not read disk info: {err}"
+            return "💾  Disk usage:\n" + out
+
         rc, out, err = self._run_cmd(["df", "-h", "--total"])
         if rc != 0:
             rc, out, err = self._run_cmd(["df", "-h"])
@@ -300,12 +392,22 @@ class Executor:
         return "💾  Disk usage:\n" + "\n".join(f"  {line}" for line in relevant[:10])
 
     def _show_system_info(self, _command: Command) -> str:
+        if os.name == "nt":
+            return f"ℹ️   System info: {platform.platform()}"
+
         rc, out, err = self._run_cmd(["uname", "-a"])
         if rc != 0:
             return f"❌  Could not read system info: {err}"
         return f"ℹ️   System info: {out}"
 
     def _show_processes(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, out, err = self._run_cmd(["tasklist"])
+            if rc != 0:
+                return f"❌  Could not list processes: {err}"
+            lines = out.splitlines()
+            return "⚙️   Running processes:\n" + "\n".join(lines[:25])
+
         rc, out, err = self._run_cmd(["ps", "aux", "--sort=-%cpu"])
         if rc != 0:
             return f"❌  Could not list processes: {err}"
@@ -327,6 +429,12 @@ class Executor:
         return "🔄  System is rebooting…"
 
     def _update_system(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, _, err = self._run_cmd(["winget", "upgrade", "--all"], timeout=120, capture=False)
+            if rc == 0:
+                return "✅  Windows packages updated via winget."
+            return f"❌  Update failed: {err or 'winget is unavailable.'}"
+
         print("📦  Running system update (this may take a while)…")
         proc = subprocess.run(["sudo", "apt", "update"], capture_output=False, timeout=120)
         if proc.returncode == 0:
@@ -334,13 +442,27 @@ class Executor:
         return "❌  Update failed. You may need to run manually with sudo."
 
     def _clear_screen(self, _command: Command) -> str:
-        os.system("clear")  # noqa: S605
+        os.system("cls" if os.name == "nt" else "clear")  # noqa: S605
         return "🧹  Screen cleared."
 
     def _show_date(self, _command: Command) -> str:
         return f"🗓️   Current date and time: {datetime.now():%Y-%m-%d %H:%M:%S}"
 
     def _show_ip(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, out, err = self._run_cmd(["ipconfig"])
+            if rc != 0:
+                return f"❌  Could not read IP address: {err}"
+            addresses = []
+            for line in out.splitlines():
+                if "IPv4" in line:
+                    parts = line.split(":", 1)
+                    if len(parts) == 2 and parts[1].strip():
+                        addresses.append(parts[1].strip())
+            if not addresses:
+                return "❌  No IP address detected."
+            return "🌐  IP address(es): " + ", ".join(addresses)
+
         rc, out, err = self._run_cmd(["hostname", "-I"])
         if rc != 0:
             return f"❌  Could not read IP address: {err}"
@@ -350,7 +472,61 @@ class Executor:
         return "🌐  IP address(es): " + ", ".join(addresses)
 
     def _show_uptime(self, _command: Command) -> str:
+        if os.name == "nt":
+            rc, out, err = self._run_cmd(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).ToString()",
+                ]
+            )
+            if rc != 0:
+                return f"❌  Could not read uptime: {err}"
+            return f"⏱️   Uptime: {out.strip()}"
+
         rc, out, err = self._run_cmd(["uptime", "-p"])
         if rc != 0:
             return f"❌  Could not read uptime: {err}"
         return f"⏱️   {out.strip()}"
+
+    def _automation_type(self, command: Command) -> str:
+        text = (command.argument or "").strip()
+        if not text:
+            return "❌  Please provide text to type."
+
+        xdotool = self._which_first(["xdotool"])
+        if xdotool:
+            rc, _, err = self._run_cmd([xdotool, "type", "--delay", "1", text])
+            if rc == 0:
+                return f"✅  Typed text: {text}"
+            if err:
+                log.warning("xdotool typing failed: %s", err)
+
+        if pyautogui is not None:
+            pyautogui.write(text, interval=0.01)
+            return f"✅  Typed text: {text}"
+
+        return "❌  Typing failed. Install xdotool or pyautogui."
+
+    def _automation_hotkey(self, command: Command) -> str:
+        keys = (command.argument or "").strip()
+        if not keys:
+            return "❌  Please provide a hotkey (example: ctrl+c)."
+
+        xdotool = self._which_first(["xdotool"])
+        if xdotool:
+            rc, _, err = self._run_cmd([xdotool, "key", keys])
+            if rc == 0:
+                return f"✅  Pressed keys: {keys}"
+            if err:
+                log.warning("xdotool hotkey failed: %s", err)
+
+        if pyautogui is not None:
+            try:
+                pyautogui.hotkey(*[part.strip() for part in keys.split("+") if part.strip()])
+                return f"✅  Pressed keys: {keys}"
+            except Exception as exc:  # noqa: BLE001
+                return f"❌  Could not press keys: {exc}"
+
+        return "❌  Hotkey failed. Install xdotool or pyautogui."

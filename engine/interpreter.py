@@ -97,6 +97,7 @@ _GENERIC_STOPWORDS = {
 _DEFAULT_CATEGORY_PRIORITY = {
     "system_control": 100,
     "file_operation": 95,
+    "automation": 90,
     "navigation": 80,
     "application": 70,
     "utility": 50,
@@ -509,6 +510,10 @@ class Interpreter:
             if tokens & {"date", "time", "clock", "ip", "uptime", "clear"}:
                 score += 0.14
 
+        elif definition.category == "automation":
+            if tokens & {"type", "write", "input", "enter", "press", "hotkey", "shortcut"}:
+                score += 0.24
+
         if definition.dangerous and tokens & {"delete", "remove", "erase", "shutdown", "reboot", "destroy"}:
             score += 0.08
 
@@ -589,7 +594,12 @@ class Interpreter:
 
         if definition.action == "launch_app":
             if definition.id == "open_browser":
-                # Browser-open intent does not require a URL argument; keep None.
+                tail = fragment
+                if matched_phrase and matched_phrase in fragment:
+                    tail = fragment.split(matched_phrase, 1)[1]
+                candidate = tail.strip().strip(' "\'')
+                if candidate and self._looks_like_url(candidate):
+                    return candidate
                 return None
 
             normalized_fragment = f" {fragment.lower()} "
@@ -668,6 +678,13 @@ class Interpreter:
         )
         log.info("Resolved contextual reference '%s' -> %s", fragment, contextual.id)
         return contextual
+
+    @staticmethod
+    def _looks_like_url(value: str) -> bool:
+        text = (value or "").strip().lower()
+        if not text:
+            return False
+        return text.startswith(("http://", "https://", "www.")) or ("." in text and " " not in text)
 
     def _update_context(self, command: Command) -> None:
         self._last_command = command
