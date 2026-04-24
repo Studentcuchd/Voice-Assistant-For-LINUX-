@@ -63,6 +63,76 @@ That file contains:
 
 If microphone input is unavailable, the app automatically falls back to text mode.
 
+## Step-by-Step Linux Run Guide
+
+Follow these steps on your Linux machine from project root:
+
+1. Clone and enter the project folder.
+
+2. Make the Linux runner executable.
+
+    chmod +x run_linux.sh
+
+3. Start in text mode (recommended first run).
+
+    ./run_linux.sh
+
+4. Start in voice mode with wake word.
+
+    ./run_linux.sh --voice --continuous --wake-word "hey linux"
+
+5. Run MVP mode if you want the legacy pipeline.
+
+    ./run_linux.sh --mvp --text
+
+6. See all runtime options.
+
+    ./run_linux.sh --help
+
+Notes:
+
+- The script installs Linux system dependencies (apt, dnf, or pacman), creates .venv, installs requirements.txt, then runs the assistant.
+- Use --skip-system-deps if you already installed OS packages.
+- Use --no-venv if you intentionally want system Python.
+
+## Ollama Installation and Usage
+
+If you want LLM fallback parsing, install and run Ollama.
+
+### Install Ollama on Linux
+
+Option A (official install script):
+
+curl -fsSL https://ollama.com/install.sh | sh
+
+Option B (manual package flow):
+
+- Follow the latest Linux instructions on Ollama docs if your distro needs a custom method.
+
+### Start Ollama service
+
+ollama serve
+
+Keep this running in a separate terminal.
+
+### Pull a model
+
+ollama pull llama3.2:3b
+
+You can replace the model name with any model installed in your environment.
+
+### Run assistant with Ollama enabled
+
+./run_linux.sh --text --ollama --ollama-model "llama3.2:3b"
+
+With custom endpoint:
+
+./run_linux.sh --text --ollama --ollama-model "llama3.2:3b" --ollama-endpoint "http://127.0.0.1:11434/api/generate"
+
+Quick check:
+
+Ask an uncommon command. If rule-based parsing does not match, fallback parsing will use Ollama.
+
 ## Quick Start
 
 ### MVP runner
